@@ -41,6 +41,8 @@ def writeSummaryResults(filename, summaryOfProcess):
             summary.write("## Results for distance file name : %s \n" % val[DISTANCE_FILE_NAME])
             summary.write("\t - Result path is : \"%s\" \n" % val[RESULTS_PATH_INDEX])
             summary.write("\t - Optimum cluster for fmesure at index : %s for FMesure = %s \n" % (val[OPTIMUM_NB_CLUSTER_INDEX], val[OPTIMUM_NB_CLUSTER_VALUE]))
+        summary.write("You can find all the best results in the "+SOLUTIONPATH+" directory.")
+        
             
         
 
@@ -400,14 +402,13 @@ def generateGraph(fMesureGlobalPerCent, bottom_limit, nbComparison, resPath, tit
         
     
 def moveToBestSolutionPath(resPath, distanceFile, optimumSolution):
-    print "moving best solution to "+str(SOLUTIONPATH)
-
     filename_old = resPath+FILENAME+str(optimumSolution[0])+".csv"
     filename_new = SOLUTIONPATH+distanceFile+"_"+FILENAME+str(optimumSolution[0])+".csv"
     if not os.path.exists(SOLUTIONPATH):
         os.makedirs(SOLUTIONPATH)
         
     shutil.copy2(filename_old, filename_new)
+    shutil.copy2(resPath+"FMesure-evolution_"+distanceFile+".png", SOLUTIONPATH+"FMesure-evolution_"+distanceFile+".png")
     
     
 
