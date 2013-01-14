@@ -6,10 +6,14 @@ import orngCA
 import sys, os
 import csv
 import math
+import shutil
 from matplotlib import pyplot
 # from pygooglechart import Chart
 # from pygooglechart import SimpleLineChart
 # from pygooglechart import Axis
+
+EPSILON = 0.00000000000001
+
 
 DISTANCE_FILES = 'DISTANCE_FILES'
 DISTANCE_FILE_NAME=0
@@ -19,9 +23,9 @@ OPTIMUM_NB_CLUSTER_VALUE=3
 
 NB_CLUSTER_REF = 'NB_CLUSTER_REF'
 NB_DISTANCE_FILE='NB_DISTANCE_FILE'
-
-EPSILON = 0.00000000000001
-PATH_EXPERIMENTS = "resultats/"
+FILENAME = "Precision_Rappel"
+SOLUTIONPATH = "resultats/"
+PATH_EXPERIMENTS = "experimentations/"
 
 ####################################################################################
 #Ecriture disque
@@ -395,8 +399,17 @@ def generateGraph(fMesureGlobalPerCent, bottom_limit, nbComparison, resPath, tit
     # pyplot.show() #Interactive
         
     
+def moveToBestSolutionPath(resPath, distanceFile, optimumSolution):
+    print "moving best solution to "+str(SOLUTIONPATH)
 
-
+    filename_old = resPath+FILENAME+str(optimumSolution[0])+".csv"
+    filename_new = SOLUTIONPATH+distanceFile+"_"+FILENAME+str(optimumSolution[0])+".csv"
+    if not os.path.exists(SOLUTIONPATH):
+        os.makedirs(SOLUTIONPATH)
+        
+    shutil.copy2(filename_old, filename_new)
+    
+    
 
 def main():
     summaryOfProcess={}
@@ -428,7 +441,7 @@ def main():
         recallGlobalPerCent = []
         ecartTypeGlobalPer = []
         for i in range(numberOfReference, len(matrix_distance[0])):
-            filename = resPath+"Precision_Rappel"+str(i)+".csv"
+            filename = resPath+FILENAME+str(i)+".csv"
             clustersPredit = sorted(Orange.clustering.hierarchical.top_clusters(root,i), key=len) #CAH
             clustersPredit = clustersIdToClustersLabel(clustersPredit,labels) #On remplace les ID de mots par leurs noms
             result_matrix = compareClusters(clusterReference, clustersPredit) #On compare les clusters en calculant la précison/Rappel/FMesure
@@ -446,19 +459,19 @@ def main():
             writeResults(filename, result_matrix, dataTuple, precisionAVG, recallAVG, FMesureAVG, ecartTypeFMesureAVG,clusterReference, clustersPredit) #On écrit le résultat dans le fichier
         
         #Résumé du traitement
-        optimumSolution = (fMesureGlobalPerCent.index(max(fMesureGlobalPerCent))+numberOfReference, max(fMesureGlobalPerCent))
-        print "maximum is at cluster :"+str(optimumSolution[0])+" for fmesure = "+str(optimumSolution[1])
+        optimumSolutionFM = (fMesureGlobalPerCent.index(max(fMesureGlobalPerCent))+numberOfReference, max(fMesureGlobalPerCent))
+        print "maximum is at cluster :"+str(optimumSolutionFM[0])+" for fmesure = "+str(optimumSolutionFM[1])
         print "Results for "+df+" written at "+resPath
         print
         summaryTemp = [None]*4
         summaryTemp[DISTANCE_FILE_NAME]= df
-        summaryTemp[OPTIMUM_NB_CLUSTER_INDEX] = str(optimumSolution[0])#normal
-        summaryTemp[OPTIMUM_NB_CLUSTER_VALUE] = str(optimumSolution[1])
+        summaryTemp[OPTIMUM_NB_CLUSTER_INDEX] = str(optimumSolutionFM[0])#normal
+        summaryTemp[OPTIMUM_NB_CLUSTER_VALUE] = str(optimumSolutionFM[1])
         summaryTemp[RESULTS_PATH_INDEX] = resPath
         summaryOfProcess[DISTANCE_FILES].append(summaryTemp)
         
         #Génération d'un graphe récapitulatif de la mesure
-        generateGraph(fMesureGlobalPerCent, numberOfReference, i,resPath+"FMesure-evolution_"+distanceFile+".png", "Evolution de la FMesure", optimumSolution)
+        generateGraph(fMesureGlobalPerCent, numberOfReference, i,resPath+"FMesure-evolution_"+distanceFile+".png", "Evolution de la FMesure", optimumSolutionFM)
         optimumSolution = (precisonGlobalPerCent.index(max(precisonGlobalPerCent))+numberOfReference, max(precisonGlobalPerCent))
         generateGraph(precisonGlobalPerCent, numberOfReference, i, resPath+"Precision-evolution_"+distanceFile+".png", "Evolution de la precision", optimumSolution)
         optimumSolution = (recallGlobalPerCent.index(max(recallGlobalPerCent))+numberOfReference, max(recallGlobalPerCent))
@@ -466,7 +479,10 @@ def main():
         optimumSolution = (ecartTypeGlobalPer.index(max(ecartTypeGlobalPer))+numberOfReference, max(ecartTypeGlobalPer))
         generateGraph(ecartTypeGlobalPer, numberOfReference, i, resPath+"ecartType-Fmesure-evolution_"+distanceFile+".png", "Evolution de l'ecart type", optimumSolution)
         
-        #Génerating summary of process report file
+        #Moving best solutions to solution_PATH
+        moveToBestSolutionPath(resPath, distanceFile, optimumSolutionFM)
+        
+    #Génerating summary of process report file
     writeSummaryResults("SUMMARY.md",summaryOfProcess)
         
 ####################################################################################
@@ -485,7 +501,7 @@ def tests():
     
     assert rappel(listA, listB) == 1.0
     assert rappel(listA, listA2) == 0.6666666666666666
-    print "get relevant"
+
 
     b = [(0.25, 0.3333333333333333, 0.2857142857142808, 10), (0.0, 0.0, 0.0, 11), (0.0, 0.0, 0.0, 9), (1.0, 0.14285714285714285, 0.2499999999999978, 4), (0.0, 0.0, 0.0, 7), (0.10256410256410256, 0.6666666666666666, 0.17777777777777545, 13), (0.0, 0.0, 0.0, 5), (0.25, 0.5, 0.3333333333333289, 12), (0.0, 0.0, 0.0, 3), (0.0, 0.0, 0.0, 2), (0.0, 0.0, 0.0, 1), (0.3333333333333333, 0.16666666666666666, 0.22222222222221777, 8), (0.0, 0.0, 0.0, 0), (1.0, 0.2, 0.3333333333333306, 6)]
     assert getMeasureAVG(b,2)-0.114455782313 <= EPSILON
