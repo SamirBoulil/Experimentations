@@ -213,7 +213,7 @@ def clusterDistances(distanceMatrix):
 
 #Fonction qui représente sous forme de dendogramme les 3 premiers clusters
 # Paramètres : root - le noeud racine de l'arbre de la CAH
-def showTroisGroupes(root):
+def showTroisGroupes(root, labels):
     topmost = sorted(Orange.clustering.hierarchical.top_clusters(root, 3), key=len)
 
     for n, cluster in enumerate(topmost):
@@ -359,7 +359,7 @@ def getRelevantData(result_matrix, measureIndex):
                     if result_matrix[indexNone][indexMax][measureIndex] != maxVal:
                         print str(result_matrix[i][indexMax]+(indexMax,))+" - "+str(maxVal)
                         print "Top at index "+str(indexMax)+" For reference : "+str(i)
-                        sys.exit("bite")
+                        sys.exit("Error")
                     
     # print unavailablePredictedCluster
     # print correspondance
@@ -410,8 +410,35 @@ def moveToBestSolutionPath(resPath, distanceFile, optimumSolution):
     shutil.copy2(filename_old, filename_new)
     shutil.copy2(resPath+"FMesure-evolution_"+distanceFile+".png", SOLUTIONPATH+"FMesure-evolution_"+distanceFile+".png")
     
+#Retourne un noeud que si on fait get clusters bha on a la meilleure coupe
+def getBestAutomaticCut(root):
+    drapeau = False
+    height = root.height
+    node = root
+    bestNode = root
+    bestAverage = 0.0;
+    state = 0
     
-
+    while not drapeau:
+        #à droite
+        if node.branches is not None:#tant que ce n'est pas une feuille
+            #On coupe à droite        
+            differenceR = height - node.right.height;
+            differenceL = height - node.left.height;
+            average = float((differenceL+differenceR)/2)
+            if average > bestAverage:
+                bestNode = node;
+                bestAverage = average
+                
+            node = node.right
+            print "avg : "+str(average)
+        else:
+            print "End of getBestCut"
+            drapeau = True
+            
+            
+    
+    
 def main():
     summaryOfProcess={}
     print
@@ -435,6 +462,9 @@ def main():
             
         labels, matrix_distance = loadDistanceMatrix(df)
         root = clusterDistances(matrix_distance)
+        showTroisGroupes(root, labels)
+        print getBestAutomaticCut(root)
+        sys.exit("TESTS")
         
         #Pour chaque groupement possible faire topmost
         fMesureGlobalPerCent = []
