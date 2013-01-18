@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
+# @author : Samir Boulil et Alexandre Hocquard
+# @date : 18/01/2013
+# @brief : Script PRD
 
 import Orange
 import orngCA
@@ -8,9 +11,6 @@ import csv
 import math
 import shutil
 from matplotlib import pyplot
-# from pygooglechart import Chart
-# from pygooglechart import SimpleLineChart
-# from pygooglechart import Axis
 
 EPSILON = 0.00000000000001
 
@@ -30,8 +30,12 @@ PATH_EXPERIMENTS = "experimentations/"
 ####################################################################################
 #Ecriture disque
 
-#Ecriture d'un rapport récapitulant les 
 def writeSummaryResults(filename, summaryOfProcess):
+    """
+        Ecriture d'un rapport récapitulant les résultats de tous les traitements.
+            - information sur les clusters de références chargés
+            - Meilleures solutions pour chaque matrice de distance utilisée
+    """
     with open(filename, 'wb') as summary:
         summary.write("# RESULTS OF EXPERIMENTATIONS :\n")
         summary.write("## General information :\n")
@@ -46,8 +50,10 @@ def writeSummaryResults(filename, summaryOfProcess):
             
         
 
-#Ecriture Des résultats pour une comparaison entre un groupement de la CAH et les clusters de références avec toutes les mesures
 def writeResults(filename, resMatrix, dataTuple, precisionAVG, recallAVG, FMesureAVG, ecartTypeAVGFMesure, clusterRef, clusterPredit):
+    """
+        Ecriture Des résultats pour une comparaison entre un groupement de la CAH et les clusters de références avec toutes les mesures
+    """    
     result_matrix = [];
     header = [];
     #Pour chaque colonne j'ai mon cluster expérimenté
@@ -114,7 +120,13 @@ def writeResults(filename, resMatrix, dataTuple, precisionAVG, recallAVG, FMesur
         file_writer.writerow(["CLUSTER PRÉDITS"])
         file_writer.writerows(clusterPredit)
 
+
 def loadCSVasListOfCLusters(path):
+    """
+        Fonction qui charge des clusters à partir d'un fichier CSV où le format est un cluster par ligne et un cluster représente un liste de mots.
+        Retourne clusters - la liste des clusters chargés (matrice)
+                    i - le nombre de termes chargés
+    """
     clusters = [];
     i=0;
     with open(path, 'rb') as csvfile:
@@ -124,11 +136,12 @@ def loadCSVasListOfCLusters(path):
             i = i+len(row);
     return  clusters, i;
 
-# Fonction qui charge en mémoire une matrice de distance stockée dans un fichier
-# paramètre : matrixPath - Chemin vers le fichier
-# retourne : les labels correspondant aux indices de la matrice de distance, la matrice de distancechargée dans un objet Orange
 def loadDistanceMatrix(matrixPath):
-    #print "Loading distance matrix"
+    """
+        # Fonction qui charge en mémoire une matrice de distance stockée dans un fichier
+        # paramètre : matrixPath - Chemin vers le fichier
+        # retourne : les labels correspondant aux indices de la matrice de distance, la matrice de distancechargée dans un objet Orange
+    """
     i=0
     j=0
     label = []
@@ -159,10 +172,12 @@ def loadDistanceMatrix(matrixPath):
     return label, orangeDistance
 
 ####################################################################################
-#Calculs le score de précision de deux groupes
-# paramètre : clusterReference, clusterPredit : des listes de mots
-# retourne une double représentant la precision (IR)
 def precision(clusterReference, clusterPredit):
+    """
+        Calculs le score de précision de deux groupes
+        paramètre : clusterReference, clusterPredit : des listes de mots
+        retourne une double représentant la precision (IR)
+    """
     tp=0.0;
     fp=0.0;
     
@@ -175,10 +190,12 @@ def precision(clusterReference, clusterPredit):
     precision = (tp/(tp+fp))
     return precision
 
-#Calculs le score de rappel de deux groupes
-# paramètre : clusterReference, clusterPredit : des listes de mots
-# retourne une double représentant le rappel (IR)
 def rappel(clusterReference, clusterPredit):
+    """
+        Calculs le score de rappel de deux groupes
+        paramètre : clusterReference, clusterPredit : des listes de mots
+        retourne une double représentant le rappel (IR)
+    """
     tp=0.0;
     fn=0.0;
     
@@ -192,50 +209,56 @@ def rappel(clusterReference, clusterPredit):
     return recall;
 
 
-#Calculs la fMesure de deux groupes
-# paramètre : clusterReference, clusterPredit : des listes de mots
-# retourne une double représentant la fmesure (IR)
 def fMesure(clusterReference, clusterPredit):
+    """
+        Calculs la fMesure de deux groupes
+        paramètre : clusterReference, clusterPredit : des listes de mots
+        retourne une double représentant la fmesure (IR)
+        
+    """
     precis = precision(clusterReference,clusterPredit)
     rapp = rappel(clusterReference, clusterPredit)
-    
     return 2.0*((precis*rapp)/(precis+rapp+EPSILON))    
 ####################################################################################
 #
-#Fonction qui effectue un CAH à partir d'une matrice de distance
-# Paramètre : distanceMatrix : L'objet orange matrice de distance
-# Retourne : un objet orange, représentant le résultat de la CAH 
 def clusterDistances(distanceMatrix):
+    """
+        Fonction qui effectue une CAH à partir d'une matrice de distance
+        Paramètre : distanceMatrix : L'objet orange matrice de distance
+        Retourne : un objet orange, représentant le résultat de la CAH 
+        
+    """
     #print "Clustering the distance matrix"
     clustering = Orange.clustering.hierarchical.HierarchicalClustering()
     clustering.linkage = Orange.clustering.hierarchical.WARD
     return clustering(distanceMatrix)
 
-#Fonction qui représente sous forme de dendogramme les 3 premiers clusters
-# Paramètres : root - le noeud racine de l'arbre de la CAH
-def showTroisGroupes(root, labels):
+def showTroisGroupes(root, labels, resPath):
+    """
+        Fonction qui représente sous forme de dendogramme les 3 premiers clusters.
+        Sauvegarde l'image dans le chemin passé en paramètre.
+        Paramètres : root - le noeud racine de l'arbre de la CAH
+                    labels - les labels des noeuds
+                    resPath - chemin de résultat pour enregistrer le dendogramme
+    """
     topmost = sorted(Orange.clustering.hierarchical.top_clusters(root, 3), key=len)
 
-    for n, cluster in enumerate(topmost):
-        print "\n\n Cluster %i \n" % n
-        for instance in cluster:
-            print labels[instance]
-    print
-    
     my_colors = [(255,0,0), (0,255,0), (0,0,255)]
-    colors = dict([(cl, col) for cl, col in zip(topmost, my_colors)])
-    
-    Orange.clustering.hierarchical.dendrogram_draw("hclust-dendrogram.png", root, labels=labels, cluster_colors=colors, color_palette=[(0,255,0), (0,0,0), (255,0,0)],
+    colors = dict([(cl, col) for cl, col in zip(topmost, my_colors)])    
+    Orange.clustering.hierarchical.dendrogram_draw(resPath+"Trois_groupes_dendrogram.png", root, labels=labels, cluster_colors=colors, color_palette=[(0,255,0), (0,0,0), (255,0,0)],
     gamma=0.5, minv=2.0, maxv=7.0)
 
 
-# Fonction qui permet de générer un tableau CSV de précisions/rappels/FMesure pour chaque cluster de référence et prédit passés en paramètre. et retourne ce tableau
-# En effet, le résultat est alors sous la forme :
-# |     | predit 1              | predit ... | predit n
-# |ref 1|(pres1,rap1,fmesure1)  |  ...       | ...
-# | ... |
-# |ref n|
 def compareClusters(clusterReference, clusterPredit):
+    """
+        Fonction qui permet de générer un tableau de précisions/rappels/FMesure pour chaque cluster de référence et prédit passés en paramètre. et retourne ce tableau
+        En effet, le résultat est alors sous la forme :
+        |     | predit 1              | predit ... | predit n
+        |ref 1|(pres1,rap1,fmesure1)  |  ...       | ...
+        | ... |
+        |ref n|
+        
+    """
     i = 0;
     j = 0;
     result_matrix = [[0 for x in xrange(len(clusterPredit))] for x in xrange(len(clusterReference))];#En ligne les clusters référent, en colonne les cluster prédit de la CAH
@@ -250,30 +273,35 @@ def compareClusters(clusterReference, clusterPredit):
     return result_matrix
 
 
-def printHierarchicalCluster(hc,labels):
-    for n, cluster in enumerate(hc):
-        print "\n\n Cluster %i \n" % n
-        for instance in cluster:
-            print instance
-    print
-
 def clustersIdToClustersLabel(cluster, labels):
+    """
+        Fonction qui retourne les termes des clusters passés en paramètre. Au cours de la CAH, Orange ne rend que les ID de termes pour chaque cluster, nous devons alors chercher
+        les termes les correspondants pour mieux les identifiers
+    """
     res = [];
     for n, cluster in enumerate(cluster):
         res.append([])
         for instance in cluster:
             res[n].append(labels[instance])
     return res;
+    
+
 #####################################################################################
-#fonction qui retourne les valeurs ayant le plus de sens en fonction des clusters Prédit et de référence (eg, en choisissant la meilleur case pour les clusters. 
-# Pour chaque cluster de référence, chercher le cluster prédit qui maximise la mesure en question et l'éliminer de la liste des clusters disponibles
-# Dans l'idéal si on trouve qu'un cluster déjà éliminé maximise encore un cluster de référence. On ira vérifier si la valeur est alors plus grande et on switchera alors
-# Ca m'a lair compliqué.
-#Retourne un liste de toute les valeurs sélectionnées par l'algorithme.
-# Où measureIndex=0 : le tuple, en maximisant la precision
-# Où measureIndex=1 : le tuple, en maximisant la rappel
-# Où measureIndex=2 : le tuple, en maximisant la FMesure
 def getRelevantData(result_matrix, measureIndex):
+    """
+        fonction qui retourne les correspondances ayant le plus de sens en fonction des clusters Prédit et de référence (eg, en choisissant la meilleur case pour les clusters. 
+        Pour chaque cluster de référence, chercher le cluster prédit qui maximise la mesure en question et l'éliminer de la liste des clusters disponibles.
+        
+        Deux étapes : 
+            - On cherche les correspondances absolues et on fait les correspondances. On élimine les clusters de référence et prédits utilisés
+            - On traite les autres correspondances au cours du parcours de la matrice.e
+        
+        Retourne un liste de toute les correspondances : avec index liste donne index cluster prédit avec (precision, rappel, FMesure)
+        Où measureIndex=0 : le tuple, en maximisant la precision
+        Où measureIndex=1 : le tuple, en maximisant la rappel
+        Où measureIndex=2 : le tuple, en maximisant la FMesure
+        
+    """
     correspondance = [None]*len(result_matrix)#Taille = nombre de cluster de référence    []#[(precision, rappe, FMesure, CLUSTER)]
     unavailablePredictedCluster = []# On met les indices des clusters prédit qui ont été affectés ?
     problematic_Ref_clusters = []# On met ici les indices des clusters de référence dont on ne peut définir directement les bons clusters
@@ -367,16 +395,25 @@ def getRelevantData(result_matrix, measureIndex):
     return correspondance
     
         
-# Fonction qui calcule la moyenne de mesure sur notre matrice.
-# Ou measureIndex=0 : precision
-# Ou measureIndex=1 : rappel
-# Ou measureIndex=2 : FMesure
 def getMeasureAVG(dataTuples, measureIndex):
+    """
+        Calcule la moyenne des tuples passés en paramètre pour la mesure indiquée :
+        0 : précision
+        1 : rappel
+        2 : FMesure
+    """
     data = [x[measureIndex] for x in dataTuples]
     return float(sum(data)/len(data))    
 
 # http://stephane.bunel.org/Divers/moyenne-ecart-type-mediane
 def getMeasureEcartType(dataTuples, measureIndex):
+    """
+        Calcul l'écart type des tuples pour la mesure passée en paramètre :
+            0 : précision
+            1 : rappel
+            2 : FMesure
+        
+    """
     dataAVG = getMeasureAVG(dataTuples, measureIndex)**2
     somme = sum([x[measureIndex]**2 for x in dataTuples])
     variance = float(somme/len(dataTuples) - dataAVG)
@@ -384,10 +421,14 @@ def getMeasureEcartType(dataTuples, measureIndex):
      
 
 
-def generateGraph(fMesureGlobalPerCent, bottom_limit, nbComparison, resPath, title, optimumSolution):
-    
+def generateGraph(MesureGlobalPerCent, bottom_limit, nbComparison, resPath, title, optimumSolution):
+    """
+        Fonction qui génère un graphe de la mesure en passée en paramètre (fMesure ou écart type) en fonction du nombres de clusters (coupe de la CAH).
+        Les graphes sont générés avec matplotlib et annotés avec le point maximum pour chaque courbe et sauvés dans le chemin résultat concernant la matrice de distance en cours
+        de traitements.
+    """
     X = range(bottom_limit,nbComparison+1)
-    Y = fMesureGlobalPerCent
+    Y = MesureGlobalPerCent
     pyplot.plot( X, Y, ':rs' )
     pyplot.ylim([0,109])
     pyplot.xlim([0,nbComparison+1])
@@ -400,6 +441,29 @@ def generateGraph(fMesureGlobalPerCent, bottom_limit, nbComparison, resPath, tit
     pyplot.close()
     # pyplot.show() #Interactive
         
+def generateGraphRappelPrecision(precisionG, rappelG , bottom_limit, nbComparison, resPath, title, optimumSolutionPrecision, optimumSolutionRappel):
+    """
+        Fonction qui permet de génerer un graphe de l'évolution de la précision et du rappel (en %) en fonction du nombres de cluster.
+        Les graphes sont générés avec matplotlib et annotés avec le point maximum pour chaque courbe et sauvés dans le chemin résultat concernant la matrice de distance en cours
+        de traitements.
+    """
+    X = range(bottom_limit,nbComparison+1)
+    Y = precisionG
+    if optimumSolutionPrecision is not None and optimumSolutionRappel is not None:
+        pyplot.annotate("Precision MAX "+str(optimumSolutionPrecision), xy=optimumSolutionPrecision, xytext=(5,100),arrowprops=dict(facecolor='black', shrink=0.05),)
+        pyplot.annotate("Rappel MAX "+str(optimumSolutionRappel), xy=optimumSolutionRappel, xytext=(5,80),arrowprops=dict(facecolor='black', shrink=0.05),)
+    
+    pyplot.plot( X, Y, ':rs' )
+    pyplot.ylim([0,109])
+    pyplot.xlim([0,nbComparison+1])
+    pyplot.title(title)
+    pyplot.xlabel( 'Number of clusters' )
+    pyplot.ylabel( '%' )
+    
+    Y=rappelG
+    pyplot.plot( X, Y, ':bs' )
+    pyplot.savefig(resPath)
+    pyplot.close()
     
 def moveToBestSolutionPath(resPath, distanceFile, optimumSolution):
     filename_old = resPath+FILENAME+str(optimumSolution[0])+".csv"
@@ -409,34 +473,6 @@ def moveToBestSolutionPath(resPath, distanceFile, optimumSolution):
         
     shutil.copy2(filename_old, filename_new)
     shutil.copy2(resPath+"FMesure-evolution_"+distanceFile+".png", SOLUTIONPATH+"FMesure-evolution_"+distanceFile+".png")
-    
-#Retourne un noeud que si on fait get clusters bha on a la meilleure coupe
-def getBestAutomaticCut(root):
-    drapeau = False
-    height = root.height
-    node = root
-    bestNode = root
-    bestAverage = 0.0;
-    state = 0
-    
-    while not drapeau:
-        #à droite
-        if node.branches is not None:#tant que ce n'est pas une feuille
-            #On coupe à droite        
-            differenceR = height - node.right.height;
-            differenceL = height - node.left.height;
-            average = float((differenceL+differenceR)/2)
-            if average > bestAverage:
-                bestNode = node;
-                bestAverage = average
-                
-            node = node.right
-            print "avg : "+str(average)
-        else:
-            print "End of getBestCut"
-            drapeau = True
-            
-            
     
     
 def main():
@@ -461,10 +497,21 @@ def main():
             os.makedirs(resPath)
             
         labels, matrix_distance = loadDistanceMatrix(df)
+        #Testons que tous les termes des clusters de références sont bien présent dans les clusters prédits :
+        tempReference = []#Mise à plat de la matrice
+        drapeau = False
+        missingTerms = []
+        for item in clusterReference:
+            for item2 in item:
+                if item2 not in labels:
+                    drapeau = True
+                    missingTerms.append(item2)
+        
+        if drapeau:
+            sys.exit("Les termes des clusters de références n'apparaissent pas tous dans la matrice de distance \n "+str(missingTerms))
         root = clusterDistances(matrix_distance)
-        showTroisGroupes(root, labels)
-        print getBestAutomaticCut(root)
-        sys.exit("TESTS")
+        showTroisGroupes(root, labels, resPath)
+
         
         #Pour chaque groupement possible faire topmost
         fMesureGlobalPerCent = []
@@ -503,10 +550,11 @@ def main():
         
         #Génération d'un graphe récapitulatif de la mesure
         generateGraph(fMesureGlobalPerCent, numberOfReference, i,resPath+"FMesure-evolution_"+distanceFile+".png", "Evolution de la FMesure", optimumSolutionFM)
-        optimumSolution = (precisonGlobalPerCent.index(max(precisonGlobalPerCent))+numberOfReference, max(precisonGlobalPerCent))
-        generateGraph(precisonGlobalPerCent, numberOfReference, i, resPath+"Precision-evolution_"+distanceFile+".png", "Evolution de la precision", optimumSolution)
-        optimumSolution = (recallGlobalPerCent.index(max(recallGlobalPerCent))+numberOfReference, max(recallGlobalPerCent))
-        generateGraph(recallGlobalPerCent, numberOfReference, i, resPath+"Recall-evolution_"+distanceFile+".png", "Evolution du rappel", optimumSolution)
+        
+        optimumPrecision = (precisonGlobalPerCent.index(max(precisonGlobalPerCent))+numberOfReference, max(precisonGlobalPerCent))
+        optimumRappel = (recallGlobalPerCent.index(max(recallGlobalPerCent))+numberOfReference, max(recallGlobalPerCent))
+        generateGraphRappelPrecision(precisonGlobalPerCent, recallGlobalPerCent, numberOfReference, i, resPath+"Precision-evolution_"+distanceFile+".png", "Evolution de la precision", optimumPrecision, optimumRappel)
+        
         optimumSolution = (ecartTypeGlobalPer.index(max(ecartTypeGlobalPer))+numberOfReference, max(ecartTypeGlobalPer))
         generateGraph(ecartTypeGlobalPer, numberOfReference, i, resPath+"ecartType-Fmesure-evolution_"+distanceFile+".png", "Evolution de l'ecart type", optimumSolution)
         
@@ -538,6 +586,7 @@ def tests():
     assert getMeasureAVG(b,2)-0.114455782313 <= EPSILON
 
     print "Tests ok"
+    
     data = [[(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.25, 0.3333333333333333, 0.2857142857142808), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.02564102564102564, 0.6666666666666666, 0.049382716049382)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.038461538461538464, 1.0, 0.07407407407407336)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.038461538461538464, 0.75, 0.07317073170731615)], [(1.0, 0.14285714285714285, 0.2499999999999978), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (1.0, 0.14285714285714285, 0.2499999999999978), (1.0, 0.14285714285714285, 0.2499999999999978), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.25, 0.14285714285714285, 0.1818181818181772), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.038461538461538464, 0.42857142857142855, 0.07058823529411613)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.038461538461538464, 1.0, 0.07407407407407336)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.5, 0.08333333333333333, 0.1428571428571404), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.16666666666666666, 0.08333333333333333, 0.11111111111110666), (0.0, 0.0, 0.0), (0.10256410256410256, 0.6666666666666666, 0.17777777777777545)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.125, 0.25, 0.16666666666666222), (0.038461538461538464, 0.75, 0.07317073170731615)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.16666666666666666, 0.25, 0.1999999999999952), (0.25, 0.5, 0.3333333333333289), (0.01282051282051282, 0.25, 0.024390243902438095)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.16666666666666666, 0.14285714285714285, 0.15384615384614886), (0.125, 0.14285714285714285, 0.13333333333332836), (0.05128205128205128, 0.5714285714285714, 0.094117647058822)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.038461538461538464, 0.5, 0.0714285714285701)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.07692307692307693, 0.8571428571428571, 0.1411764705882338)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.3333333333333333, 0.16666666666666666, 0.22222222222221777), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.05128205128205128, 0.6666666666666666, 0.0952380952380939)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.038461538461538464, 0.6, 0.0722891566265049)], [(0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (1.0, 0.2, 0.3333333333333306), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.5, 0.2, 0.28571428571428165), (0.0, 0.0, 0.0), (0.125, 0.1, 0.11111111111110618), (0.05128205128205128, 0.4, 0.0909090909090889)]]
     b = getRelevantData(data,2)#get FMesure
     
@@ -600,6 +649,32 @@ if __name__ == '__main__':
     #         #else si FMesure supérieure
     
     
+    #Retourne un noeud que si on fait get clusters bha on a la meilleure coupe
+    # def getBestAutomaticCut(root):
+    #     drapeau = False
+    #     height = root.height
+    #     node = root
+    #     bestNode = root
+    #     bestAverage = 0.0;
+    #     state = 0
+    #     
+    #     while not drapeau:
+    #         #à droite
+    #         if node.branches is not None:#tant que ce n'est pas une feuille
+    #             #On coupe à droite        
+    #             differenceR = height - node.right.height;
+    #             differenceL = height - node.left.height;
+    #             average = float((differenceL+differenceR)/2)
+    #             if average > bestAverage:
+    #                 bestNode = node;
+    #                 bestAverage = average
+    #                 
+    #             node = node.right
+    #             print "avg : "+str(average)
+    #         else:
+    #             print "End of getBestCut"
+    #             drapeau = True
+            
     
     # chart = SimpleLineChart(500, 500, y_range=[0, max_y])
     # chart.add_data(fMesureGlobalPerCent)
